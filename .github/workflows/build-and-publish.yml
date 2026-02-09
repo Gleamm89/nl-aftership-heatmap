@@ -1,0 +1,64 @@
+name: Build & Publish Heatmap
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"   # every day 06:00 UTC
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "requirements.txt"
+      - ".github/workflows/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: 
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Create folders
+        run: mkdir -p data cache output public
+
+      - name: Fetch last 200 Delivered to NL from AfterShip
+        env:
+          AFTERSHIP_API_KEY: ${{ secrets.AFTERSHIP_API_KEY }}
+        run: python src/fetch_aftership_nl_last200.py
+
+      - name: Extract points
+        run: python src/extract_points.py --input data/aftership_last200_nl.json --output output/nl_delivery_points.csv
+
+      - name: Build heatmap (geocode + cache)
+        run: python src/build_heatmap.py
+
+      - name: Copy heatmap to public
+        run: cp output/nl_delivery_heatmap.html public/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
