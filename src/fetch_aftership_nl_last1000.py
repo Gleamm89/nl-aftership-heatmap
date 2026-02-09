@@ -1,23 +1,25 @@
 import os
 import json
 import time
-import requests 
+import requests
 
 AFTERSHIP_API_KEY = os.environ["AFTERSHIP_API_KEY"]
 
-def fetch_nl_trackings(max_total: int = 1000, tag: str | None = "Delivered", throttle_s: float = 0.4) -> dict:
-    """
-    Fetch up to max_total trackings for destination NLD using cursor pagination.
-    AfterShip max limit per request is 200, so we page until we reach max_total or no cursor.
-    Returns a payload shaped like AfterShip v4: {"data": {"trackings":[...], "cursor": ...}}
-    """
+def fetch_nl_trackings(
+    max_total: int = 1000,
+    tag: str | None = "Delivered",
+    throttle_s: float = 0.4,
+    created_at_min: int | None = None,  # unix seconds
+) -> dict:
     url = "https://api.aftership.com/v4/trackings"
     headers = {"as-api-key": AFTERSHIP_API_KEY, "Content-Type": "application/json"}
 
     all_trackings = []
     cursor = None
+    page = 0
 
     while len(all_trackings) < max_total:
+        page += 1
         params = {
             "destination": "NLD",
             "limit": 200,  # API max per request
@@ -26,6 +28,8 @@ def fetch_nl_trackings(max_total: int = 1000, tag: str | None = "Delivered", thr
             params["tag"] = tag
         if cursor:
             params["cursor"] = cursor
+        if created_at_min:
+            params["created_at_min"] = created_at_min
 
         r = requests.get(url, params=params, headers=headers, timeout=30)
         r.raise_for_status()
@@ -35,28 +39,32 @@ def fetch_nl_trackings(max_total: int = 1000, tag: str | None = "Delivered", thr
         trackings = data.get("trackings") or []
         cursor = data.get("cursor")
 
+        print(f"Page {page}: got {len(trackings)} trackings; total={len(all_trackings)+len(trackings)}; cursor={cursor}")
+
         if not trackings:
             break
 
         all_trackings.extend(trackings)
 
-        # stop if no next page
         if not cursor:
             break
 
-        # be polite to avoid throttling
         time.sleep(throttle_s)
 
-    # trim to exactly max_total
-    all_trackings = all_trackings[:max_total]
-
-    # return in a familiar wrapper so your extractor can still read it
-    return {"data": {"trackings": all_trackings}}
+    return {"data": {"trackings": all_trackings[:max_total]}}
 
 if __name__ == "__main__":
     os.makedirs("data", exist_ok=True)
 
-    payload = fetch_nl_trackings(max_total=1000, tag="Delivered")
+    # OPTIONAL: broaden the window by forcing a minimum created_at.
+    # Example: last 365 days (if endpoint honors it).
+    # Uncomment if needed:
+    # import time as _t
+    # created_at_min = int(_t.time()) - 365 * 24 * 3600
+
+    created_at_min = None
+
+    payload = fetch_nl_trackings(max_total=1000, tag="Delivered", created_at_min=created_at_min)
     out_path = "data/aftership_last1000_nl.json"
 
     with open(out_path, "w", encoding="utf-8") as f:
