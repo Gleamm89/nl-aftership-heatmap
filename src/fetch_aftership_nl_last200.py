@@ -1,7 +1,7 @@
 import os
 import json
 import time
-import requests
+import requests 
 
 AFTERSHIP_API_KEY = os.environ["AFTERSHIP_API_KEY"]
 
