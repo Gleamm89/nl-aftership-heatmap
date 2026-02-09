@@ -40,10 +40,10 @@ jobs:
       - name: Fetch last 200 Delivered to NL from AfterShip
         env:
           AFTERSHIP_API_KEY: ${{ secrets.AFTERSHIP_API_KEY }}
-        run: python src/fetch_aftership_nl_last200.py
+        run: python src/fetch_aftership_nl_last1000.py
 
       - name: Extract points
-        run: python src/extract_points.py --input data/aftership_last200_nl.json --output output/nl_delivery_points.csv
+        run: python src/extract_points.py --input data/aftership_last1000_nl.json --output output/nl_delivery_points.csv
 
       - name: Build heatmap (geocode + cache)
         run: python src/build_heatmap.py
