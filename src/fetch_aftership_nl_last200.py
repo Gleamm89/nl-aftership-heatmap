@@ -6,7 +6,7 @@ AFTERSHIP_API_KEY = os.environ["AFTERSHIP_API_KEY"]
 
 def fetch_last_200_nl(tag: str | None = "Delivered") -> dict:
     url = "https://api.aftership.com/v4/trackings"
-    params = {"destination": "NLD", "limit": 15}
+    params = {"destination": "NLD", "limit": 1500}
     if tag:
         params["tag"] = tag
 
