@@ -10,7 +10,7 @@ on:
       - "src/**"
       - "requirements.txt"
       - ".github/workflows/**"
-      
+
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -18,7 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions: 
+    permissions:
       contents: write
       pages: write
       id-token: write
@@ -37,7 +37,14 @@ jobs:
       - name: Create folders
         run: mkdir -p data cache output public
 
-      - name: Fetch last 200 Delivered to NL from AfterShip
+      - name: Cache geocoding DB
+        uses: actions/cache@v4
+        with:
+          path: cache/geocache.sqlite
+          key: geocache-v1
+          restore-keys: geocache-v1
+
+      - name: Fetch last 1000 Delivered to NL from AfterShip
         env:
           AFTERSHIP_API_KEY: ${{ secrets.AFTERSHIP_API_KEY }}
         run: python src/fetch_aftership_nl_last1000.py
