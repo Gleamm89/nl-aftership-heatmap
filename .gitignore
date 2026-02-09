@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+cache/*.sqlite
+output/*.csv
+output/*.html
+data/*.json
